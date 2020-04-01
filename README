@@ -1,0 +1,69 @@
+Nume: Ghenea Iustina
+Grupa: 332CC
+
+================================== Tema 1 - ASC =======================================
+
+Marketplace => producers - consumers
+
+Marketplace
+	Constructorul cuprinde:
+		- un dictionar pentru produse
+		- o lista de liste pentru cosurile de cumparaturi
+			(asociaza cosul cu id-ul sau)
+		- nr de producatori
+		- nr de cosuri
+		- un reentrant lock
+
+	In functia register_producer() am folosit lock-ul, pentru a nu aparea situatia
+in care doi sau mai multi producatori incrementeaza nr lor total in acelasi timp. 
+La un prim acquire se face lock si la al doilea acquire se face unlock.
+
+	In functia publish(), adaug in dictionarul de produse daca mai este spatiu in
+coada producatorului si returnez adevarat, altfel fals. Se foloseste functia append 
+care este thread safe, de aceea nu este necesara o metoda de sincronizare.
+
+	Functia new_cart() determina id-ul cosului de cumparaturi, si creeaza o lista
+goala pentru id-ul determinat.
+
+	Functia add_to_cart() cauta in dictionarul producatorilor produsul cerut.
+Daca acesta se gaseste, se iese din bucla while,produsul este adaugat in cos, si sters
+din lista de produse disponibile, returnand adevarat. 
+Daca acesta nu se gaseste, se returneaza fals.
+De asemenea, nu s-au folosit alte metode de sincronizare, deoarece append si remove 
+sunt thread safe.
+
+	Functia remove_from_cart() sterge din cosul de cumparaturi produsul, si il
+face din nou disponibil in lista de produse a producatorului sau.
+
+	Functia place_order() goleste cosul de cumparaturi si il returneaza (in starea
+precedenta actiunii de golire).
+
+Producer
+	Constructorul cuprinde:
+		- initializarea thread-ului, folosing kwargs -> seteaza daemonii
+		- generarea unui nou producator -> apeleaza register_producer()
+		 din marketplace
+		- initializarea unui eveniment
+
+	Functia run() itereaza prin lista de produse pe care le poate produce, 
+in cantitatea data, producatorul, si le publica in marketplace, atat cat ii permite 
+lungimea cozii de produse. Daca produsul a fost adaugat, functia intoarce adevarat. 
+Altfel, intoarce fals. Evenimentul genereaza o stare de asteptare, a timpului aferent 
+primului produs, sau a unui timp de reincercare. 
+
+
+Consumer
+	Constructorul cuprinde:
+		- initializarea thread-ului, folosing kwargs -> seteaza daemonii
+		- preluarea numelui dat de kwargs
+		- initializarea unui eveniment
+
+
+	Functia run() itereaza prin lista de liste de operatii, si conform
+ cantitatii de produs speficata, adaug sau sterg din cos, parcurgand toate operatiile.
+Daca operatia de add cere un produs indisponibil, aceasta se va reincerca dupa un timp 
+dat pana va avea succes, aici folosind asteptarea generata de eveniment. Daca produsul 
+a fost adaugat cu succes, folosind functia set() a clasei Event, ies din bucla, aceasta 
+avand functia de break. Daca se cere operatia de remove a unui produs, acesta este sters 
+din cosul de cumparaturi. 
+La final, se afiseaza rezultatul: pentru fiecare consumator, o lista de produse.
